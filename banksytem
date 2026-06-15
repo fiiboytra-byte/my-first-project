@@ -1,0 +1,204 @@
+import sqlite3
+import random
+
+# Create Database
+conn = sqlite3.connect("bank.db")
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS accounts(
+    account_no INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT,
+    balance REAL DEFAULT 0
+)
+""")
+
+conn.commit()
+
+
+# Create Account
+def create_account():
+    name = input("Enter Name: ")
+    phone = input("Enter Phone: ")
+
+    account_no = random.randint(100000, 999999)
+
+    cursor.execute(
+        "INSERT INTO accounts(account_no,name,phone,balance) VALUES(?,?,?,?)",
+        (account_no, name, phone, 0)
+    )
+
+    conn.commit()
+
+    print("\nAccount Created Successfully!")
+    print("Account Number:", account_no)
+
+
+# Deposit
+def deposit():
+    acc = int(input("Enter Account Number: "))
+    amount = float(input("Enter Amount: "))
+
+    cursor.execute(
+        "UPDATE accounts SET balance = balance + ? WHERE account_no=?",
+        (amount, acc)
+    )
+
+    conn.commit()
+    print("Deposit Successful!")
+
+
+# Withdraw
+def withdraw():
+    acc = int(input("Enter Account Number: "))
+
+    cursor.execute(
+        "SELECT balance FROM accounts WHERE account_no=?",
+        (acc,)
+    )
+
+    result = cursor.fetchone()
+
+    if not result:
+        print("Account Not Found!")
+        return
+
+    balance = result[0]
+
+    amount = float(input("Enter Amount: "))
+
+    if amount > balance:
+        print("Insufficient Balance!")
+        return
+
+    cursor.execute(
+        "UPDATE accounts SET balance = balance - ? WHERE account_no=?",
+        (amount, acc)
+    )
+
+    conn.commit()
+    print("Withdraw Successful!")
+
+
+# Check Balance
+def check_balance():
+    acc = int(input("Enter Account Number: "))
+
+    cursor.execute(
+        "SELECT * FROM accounts WHERE account_no=?",
+        (acc,)
+    )
+
+    account = cursor.fetchone()
+
+    if account:
+        print("\n===== ACCOUNT INFO =====")
+        print("Account No :", account[0])
+        print("Name       :", account[1])
+        print("Phone      :", account[2])
+        print("Balance    : $", account[3])
+    else:
+        print("Account Not Found!")
+
+
+# Transfer
+def transfer():
+    from_acc = int(input("From Account: "))
+    to_acc = int(input("To Account: "))
+    amount = float(input("Amount: "))
+
+    cursor.execute(
+        "SELECT balance FROM accounts WHERE account_no=?",
+        (from_acc,)
+    )
+
+    result = cursor.fetchone()
+
+    if not result:
+        print("Sender Account Not Found!")
+        return
+
+    balance = result[0]
+
+    if balance < amount:
+        print("Insufficient Balance!")
+        return
+
+    cursor.execute(
+        "SELECT account_no FROM accounts WHERE account_no=?",
+        (to_acc,)
+    )
+
+    if not cursor.fetchone():
+        print("Receiver Account Not Found!")
+        return
+
+    cursor.execute(
+        "UPDATE accounts SET balance = balance - ? WHERE account_no=?",
+        (amount, from_acc)
+    )
+
+    cursor.execute(
+        "UPDATE accounts SET balance = balance + ? WHERE account_no=?",
+        (amount, to_acc)
+    )
+
+    conn.commit()
+
+    print("Transfer Successful!")
+
+
+# View All Accounts
+def view_accounts():
+    cursor.execute("SELECT * FROM accounts")
+
+    accounts = cursor.fetchall()
+
+    print("\n===== ALL ACCOUNTS =====")
+
+    for acc in accounts:
+        print(
+            f"Acc No: {acc[0]} | Name: {acc[1]} | Phone: {acc[2]} | Balance: ${acc[3]}"
+        )
+
+
+# Main Menu
+while True:
+    print("\n===== BANK MANAGEMENT SYSTEM =====")
+    print("1. Create Account")
+    print("2. Deposit")
+    print("3. Withdraw")
+    print("4. Check Balance")
+    print("5. Transfer")
+    print("6. View All Accounts")
+    print("7. Exit")
+
+    choice = input("Choose Option: ")
+
+    if choice == "1":
+        create_account()
+
+    elif choice == "2":
+        deposit()
+
+    elif choice == "3":
+        withdraw()
+
+    elif choice == "4":
+        check_balance()
+
+    elif choice == "5":
+        transfer()
+
+    elif choice == "6":
+        view_accounts()
+
+    elif choice == "7":
+        print("Thank You!")
+        break
+
+    else:
+        print("Invalid Choice!")
+
+conn.close()
